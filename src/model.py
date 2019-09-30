@@ -13,20 +13,12 @@ class Model(nn.Module):
 
     def forward(self, x):
 
-        print(x)
         out, hidden = self.rnn(x)
         out = out.squeeze(0)
-        print ("original hidden", hidden)
-        print("original out", out)
         out = self.fc(out)
-        print (out)
+        #print("final out",out)
 
         return out, hidden
 
-    def init_hidden(self, batch_size):
-        # This method generates the first hidden state of zeros which we'll use in the forward pass
-        # We'll send the tensor holding the hidden state to the device we specified earlier as well
-        hidden = torch.zeros(self.n_layers, batch_size, self.hidden_dim)
-        return hidden.float()
 
 

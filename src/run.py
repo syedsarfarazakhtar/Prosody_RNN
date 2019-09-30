@@ -27,7 +27,7 @@ samples, cols = get_features()
 mymodel = model.Model(input_size=len(cols), output_size=2, hidden_dim=50, n_layers=2)
 
 n_epochs = 20
-lr = 0.01
+lr = 0.0001
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(mymodel.parameters(), lr=lr)
@@ -53,7 +53,6 @@ for epoch in range(1, n_epochs + 1):
 
             X_train = torch.from_numpy(X_train).float()
             X_train = X_train.unsqueeze(0)
-            print (X_train.shape)
             y_train = []
             for i in y_train_str:
                 if i == "accented":
@@ -74,12 +73,11 @@ for epoch in range(1, n_epochs + 1):
 
             output, hidden = mymodel(X_train)
             loss = criterion(output, cross_entropy_target)
-            #print (cross_entropy_target, output)
 
             loss.backward()  # Does backpropagation and calculates gradients
             optimizer.step()  # Updates the weights accordingly
 
-    if epoch % 5 == 0:
+    if epoch % 1 == 0:
         print('Epoch: {}/{}.............'.format(epoch, n_epochs), end=' ')
         print("Loss: {:.4f}".format(loss.item()))
 
