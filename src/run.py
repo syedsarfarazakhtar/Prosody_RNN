@@ -26,7 +26,7 @@ else:
 samples, cols = get_features()
 mymodel = model.Model(input_size=len(cols), output_size=2, hidden_dim=50, n_layers=2)
 
-n_epochs = 20
+n_epochs = 40
 lr = 0.0001
 
 criterion = nn.CrossEntropyLoss()
@@ -35,7 +35,6 @@ mymodel.to(device)
 
 for epoch in range(1, n_epochs + 1):
 
-    optimizer.zero_grad()  # Clears existing gradients from previous epoch
     for sample in samples:
         for i in sample:
             x = i
@@ -76,6 +75,7 @@ for epoch in range(1, n_epochs + 1):
 
             loss.backward()  # Does backpropagation and calculates gradients
             optimizer.step()  # Updates the weights accordingly
+            optimizer.zero_grad()  # Clears existing gradients
 
     if epoch % 1 == 0:
         print('Epoch: {}/{}.............'.format(epoch, n_epochs), end=' ')

@@ -348,16 +348,16 @@ def get_features():
     good = ["syntax/pos", "punctuation", "position", "morph", "ner", "supertag", "mentions"]
 
     featsets['task1'] = good
-    '''
+
     featsets['task1'].append("liwc")
     featsets['task1'].append("google_news_embeddings")
     featsets['task1'].append("domain_adapted_embeddings")
     featsets['task1'].append("gender_neutral_embeddings")
     featsets['task1'].append("embeddings")
     featsets['task1'].append("speciteller") 
-    '''
 
-    featsets['task1'] = ["punctuation", "ner", "syntax/pos"]
+
+    featsets['task1'] = good
 
     print("##### ML experiments on all words: #####")
 
