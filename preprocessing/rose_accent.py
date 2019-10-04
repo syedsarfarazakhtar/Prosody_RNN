@@ -14,7 +14,7 @@ from sklearn.impute import SimpleImputer
 
 #########################################################
 
-CSV_FILE = "../data/burnc-20190514.csv"
+CSV_FILE = "../data/burnc-20191004.csv"
 
 #########################################################
 
@@ -121,6 +121,13 @@ def process_data(df, featcats):
     features['embeddings'] = ['glove_6B_50d', 'glove_6B_100d', 'glove_6B_200d', 'glove_6B_300d', 'glove_27B_25d',
                               'glove_27B_50d', 'glove_27B_100d', 'glove_27B_200d', 'glove_42B_300d', 'glove_840B_300d',
                               'pt_deps_300d']
+
+    s = "google_news_full_"
+    tmp = []
+    for i in range(300):
+        tmp.append(s+str(i))
+
+    features['google_news_full'] = tmp
 
     features['speciteller'] = ['speciteller']
 
@@ -239,10 +246,11 @@ def process_data(df, featcats):
 
     X_train, y_train, X_test, y_test = [], [], [], []
     samples = []
-    tmp = "f1as01p1"
+    #tmp = "f1as01p1"
+    tmp = '0'
     for index, row in df.iterrows():
-        if row['file_id'] != tmp:
-            tmp = row['file_id']
+        if row['sentence_id'] != tmp:
+            tmp = row['sentence_id']
             X_train = np.asarray(X_train)
             X_test = np.asarray(X_test)
             samples.append([X_train, y_train, X_test, y_test])
@@ -354,7 +362,8 @@ def get_features():
     featsets['task1'].append("domain_adapted_embeddings")
     featsets['task1'].append("gender_neutral_embeddings")
     featsets['task1'].append("embeddings")
-    featsets['task1'].append("speciteller") 
+    featsets['task1'].append("speciteller")
+    featsets['task1'].append("google_news_full")
 
 
     featsets['task1'] = good

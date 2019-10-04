@@ -23,10 +23,10 @@ else:
     print("GPU not available, CPU used")
 
 samples, cols = get_features()
-mymodel = model.Model(input_size=len(cols), output_size=2, hidden_dim=100, n_layers=2)
+mymodel = model.Model(input_size=len(cols), output_size=2, hidden_dim=200, n_layers=2)
 
-n_epochs = 500
-lr = 0.00001
+n_epochs = 25
+lr = 0.0001
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(mymodel.parameters(), lr=lr)
@@ -96,7 +96,7 @@ for sample in samples:
         y_test.to(device)
         testing_set.append([X_test, y_test])
 
-validation_set = testing_set[0:int(len(testing_set)/2)]
+validation_set = testing_set[0:int(len(testing_set))]
 testing_set = testing_set[int(len(testing_set)/2)::]
 print (len(training_set), len(validation_set), len(testing_set))
 
@@ -166,6 +166,7 @@ for epoch in range(1, n_epochs + 1):
         print("Precision: ", precision)
         print("Recall: ", recall)
         print("F1: ", f1)
+
         print()
 
 if False:
