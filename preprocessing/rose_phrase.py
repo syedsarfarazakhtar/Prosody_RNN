@@ -13,7 +13,7 @@ from itertools import combinations
 
 #########################################################
 
-CSV_FILE = "burnc-20190514.csv"
+CSV_FILE = "../data/burnc-20191004.csv"
 
 #########################################################
 
@@ -120,6 +120,13 @@ def process_data(df, featcats):
     features['embeddings'] = ['glove_6B_50d', 'glove_6B_100d', 'glove_6B_200d', 'glove_6B_300d', 'glove_27B_25d',
                               'glove_27B_50d', 'glove_27B_100d', 'glove_27B_200d', 'glove_42B_300d', 'glove_840B_300d',
                               'pt_deps_300d']
+
+    s = "google_news_full_"
+    tmp = []
+    for i in range(300):
+        tmp.append(s+str(i))
+
+    features['google_news_full'] = tmp
 
     features['speciteller'] = ['speciteller']
 
@@ -236,17 +243,26 @@ def process_data(df, featcats):
     X = imputer.fit_transform(X)
 
     X_train, y_train, X_test, y_test = [], [], [], []
+    samples = []
+    #tmp = "f1as01p1"
+    tmp = '0'
     for index, row in df.iterrows():
+        if row['sentence_id'] != tmp:
+            tmp = row['sentence_id']
+            X_train = np.asarray(X_train)
+            X_test = np.asarray(X_test)
+            samples.append([X_train, y_train, X_test, y_test])
+            X_train, y_train, X_test, y_test = [], [], [], []
+
         if "f3a" in row['file_id']:
             y_test.append(y[index])
             X_test.append(X[index].tolist())
         else:
             y_train.append(y[index])
             X_train.append(X[index].tolist())
-    X_train = np.asarray(X_train)
-    X_test = np.asarray(X_test)
 
-    return X_train, y_train, X_test, y_test, columns
+    samples.append([X_train, y_train, X_test, y_test])
+    return samples, columns
 
 
 # Trains and evaluates a classifier running 5-fold CV; compares results against
@@ -301,9 +317,11 @@ def run_experiments(X_train, y_train, X_test, y_test, columns):
     clf = sklearn.ensemble.RandomForestClassifier(n_estimators=200, n_jobs=-1, random_state=1)
     return test(clf, X_train, y_train, X_test, y_test, columns)
 
+
 def testfeats(featset):
     print("All features")
     print(featset)
+    print()
     bestfeats = featset
     bestfound = True
     bestscore = 0
@@ -311,40 +329,55 @@ def testfeats(featset):
     # bestscore = run_experiments(X_train,y_train,X_test,y_test,cols)
     # print()
     # print()
-
-    for k in range(2):
+    feature_combinations = []
+    for k in range(1):
         comb = combinations(featset, len(featset) - k)
         for j in comb:
             print(j)
             print()
-            X_train, y_train, X_test, y_test, cols = process_data(df_all, j)
-            newscore = run_experiments(X_train, y_train, X_test, y_test, cols)
-            if newscore > bestscore:
-                bestscore = newscore
-                bestfeats = j
-                if k > 0:
-                    bestfound = False
+            samples, cols = process_data(df_all, j)
+            feature_combinations.append(samples)
+            #newscore = run_experiments(X_train, y_train, X_test, y_test, cols)
+            #if newscore > bestscore:
+            #    bestscore = newscore
+            #    bestfeats = j
+            #    if k > 0:
+            #        bestfound = False
+            #
+            #print()
+    return feature_combinations, cols
+    #return bestfeats, bestfound
 
-            print()
-    return bestfeats, bestfound
-
-if __name__ == '__main__':
+def get_features():
 
     featsets = dict()
 
     good = ["syntax/pos", "punctuation", "position", "morph", "ner", "supertag", "mentions"]
+
     featsets['task1'] = good
+
     featsets['task1'].append("liwc")
     featsets['task1'].append("google_news_embeddings")
     featsets['task1'].append("domain_adapted_embeddings")
     featsets['task1'].append("gender_neutral_embeddings")
     featsets['task1'].append("embeddings")
     featsets['task1'].append("speciteller")
+    featsets['task1'].append("google_news_full")
+
+
+    featsets['task1'] = good
 
     print("##### ML experiments on all words: #####")
 
-    done = False
     bestset = featsets['task1']
+
+    return testfeats(bestset)
+
+if __name__ == '__main__':
+
+    done = False
+    bestset = get_features()
 
     while not done:
         bestset, done = testfeats(bestset)
+

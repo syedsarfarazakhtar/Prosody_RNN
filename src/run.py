@@ -1,5 +1,7 @@
 import torch
-from preprocessing.rose_accent import get_features
+#from preprocessing.rose_accent import get_features
+from preprocessing.rose_phrase import get_features
+
 import model
 from torch import nn
 import numpy as np
@@ -28,6 +30,9 @@ mymodel = model.Model(input_size=len(cols), output_size=2, hidden_dim=200, n_lay
 n_epochs = 25
 lr = 0.0001
 
+labels = ["accented", "unaccented"]
+labels = ["break", "nobreak"]
+
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(mymodel.parameters(), lr=lr)
 mymodel.to(device)
@@ -55,7 +60,7 @@ for sample in samples:
         X_train = X_train.unsqueeze(0)
         y_train = []
         for i in y_train_str:
-            if i == "accented":
+            if i == labels[0]:
                 y_train.append([1, 0])
             else:
                 y_train.append([0, 1])
@@ -85,7 +90,7 @@ for sample in samples:
         X_test = X_test.unsqueeze(0)
         y_test = []
         for i in y_test_str:
-            if i == "accented":
+            if i == labels[0]:
                 y_test.append([1, 0])
             else:
                 y_test.append([0, 1])
@@ -96,7 +101,7 @@ for sample in samples:
         y_test.to(device)
         testing_set.append([X_test, y_test])
 
-validation_set = testing_set[0:int(len(testing_set))]
+validation_set = testing_set[0:int(len(testing_set)/2)]
 testing_set = testing_set[int(len(testing_set)/2)::]
 print (len(training_set), len(validation_set), len(testing_set))
 
