@@ -332,7 +332,9 @@ def testfeats(featset):
     # print()
     sample_features = []
     feature_combinations = []
-    for k in range(1):
+    sample_cols = []
+
+    for k in range(2):
         comb = combinations(featset, len(featset) - k)
         for j in comb:
             print(j)
@@ -340,6 +342,7 @@ def testfeats(featset):
             print()
             samples, cols = process_data(df_all, j)
             feature_combinations.append(samples)
+            sample_cols.append(cols)
             #newscore = run_experiments(X_train, y_train, X_test, y_test, cols)
             #if newscore > bestscore:
             #    bestscore = newscore
@@ -348,17 +351,20 @@ def testfeats(featset):
             #        bestfound = False
             #
             #print()
-    return feature_combinations, cols, sample_features
+
+    for i in sample_cols:
+        print(len(i))
+    return feature_combinations, sample_cols, sample_features
     #return bestfeats, bestfound
 
 def get_features():
 
     featsets = dict()
 
-    good = ["syntax/pos", "punctuation", "position", "morph", "ner", "supertag", "mentions"]
+    good = ["syntax/pos", "punctuation"]#, "position", "morph", "ner", "supertag", "mentions"]
 
     featsets['task1'] = good
-
+    '''
     featsets['task1'].append("liwc")
     featsets['task1'].append("google_news_embeddings")
     featsets['task1'].append("domain_adapted_embeddings")
@@ -366,8 +372,7 @@ def get_features():
     featsets['task1'].append("embeddings")
     featsets['task1'].append("speciteller")
     featsets['task1'].append("google_news_full")
-
-    featsets['task1'] = good
+    '''
 
     print("##### ML experiments on all words: #####")
 
