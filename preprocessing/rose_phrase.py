@@ -328,15 +328,18 @@ def testfeats(featset):
     # X_train, y_train, X_test ,y_test,cols = process_data(df_all, featset)
     # bestscore = run_experiments(X_train,y_train,X_test,y_test,cols)
     # print()
-    # print()
+    sample_features = []
     feature_combinations = []
+    sample_cols = []
     for k in range(1):
         comb = combinations(featset, len(featset) - k)
         for j in comb:
             print(j)
+            sample_features.append(j)
             print()
             samples, cols = process_data(df_all, j)
             feature_combinations.append(samples)
+            sample_cols.append(cols)
             #newscore = run_experiments(X_train, y_train, X_test, y_test, cols)
             #if newscore > bestscore:
             #    bestscore = newscore
@@ -345,7 +348,7 @@ def testfeats(featset):
             #        bestfound = False
             #
             #print()
-    return feature_combinations, cols
+    return feature_combinations, sample_cols, sample_features
     #return bestfeats, bestfound
 
 def get_features():
@@ -371,7 +374,7 @@ def get_features():
 
     bestset = featsets['task1']
 
-    return testfeats(bestset)
+    return testfeats(bestset), featsets['task1']
 
 if __name__ == '__main__':
 

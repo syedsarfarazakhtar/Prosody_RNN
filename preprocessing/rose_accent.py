@@ -22,7 +22,8 @@ CSV_FILE = "../data/burnc-20191004.csv"
 df_all = pd.read_csv(CSV_FILE, low_memory=False)
 
 # Uncomment for debugging.
-#df_all = df_all.head(5000)
+df_all = df_all.head(1000)
+#df_all = df_all.head(40000)
 
 # Add these columns using Amaan's function.
 # IP_Pos_Normalized: the normalized position of the token within its intonational phrase
@@ -45,7 +46,7 @@ print("#words:", len(df_all), "#referring expressions:", len(df_ref))
 # df: dataframe
 # featcats: list of feature categories to include. eg, ['syntax/pos','mentions']
 # Outputs X (instance vectors), y (labels), columns (feature names)
-def process_data(df, featcats):
+def process_data(df, featcats, test_speaker, final_speaker_test):
     features = dict()
 
     '''features['dependency'] = ['syntactic_function', 'next_syntactic_function']
@@ -245,9 +246,10 @@ def process_data(df, featcats):
     X = imputer.fit_transform(X)
 
     X_train, y_train, X_test, y_test = [], [], [], []
+    rf_X_train, rf_y_train, rf_X_test, rf_y_test = [], [], [], []
     samples = []
-    #tmp = "f1as01p1"
     tmp = '0'
+    #tmp = "f1as01p1"
     for index, row in df.iterrows():
         if row['sentence_id'] != tmp:
             tmp = row['sentence_id']
@@ -256,15 +258,24 @@ def process_data(df, featcats):
             samples.append([X_train, y_train, X_test, y_test])
             X_train, y_train, X_test, y_test = [], [], [], []
 
-        if "f3a" in row['file_id']:
+        if test_speaker in row['file_id']:
             y_test.append(y[index])
             X_test.append(X[index].tolist())
-        else:
+            rf_y_test.append(y[index])
+            rf_X_test.append(X[index].tolist())
+        elif final_speaker_test not in row['file_id']:
             y_train.append(y[index])
             X_train.append(X[index].tolist())
+            rf_y_train.append(y[index])
+            rf_X_train.append(X[index].tolist())
 
+    rf_X_train = np.asarray(rf_X_train)
+    rf_X_test = np.asarray(rf_X_test)
+
+    X_train = np.asarray(X_train)
+    X_test = np.asarray(X_test)
     samples.append([X_train, y_train, X_test, y_test])
-    return samples, columns
+    return samples, columns, rf_X_train, rf_y_train, rf_X_test, rf_y_test
 
 
 # Trains and evaluates a classifier running 5-fold CV; compares results against
@@ -284,6 +295,7 @@ def test(clf, X_train, y_train, X_test, y_test, columns):
     print("Classifier: {}".format(type(clf)))
     # print("Cross-validation results: {} +/- {} (random={})".format(round(res_cv.mean(), 3), round(res_cv.std(), 3), round(random_cv.mean(), 3)))
 
+
     clf.fit(X_train, y_train)
     dummy_clf.fit(X_train, y_train)
 
@@ -295,6 +307,9 @@ def test(clf, X_train, y_train, X_test, y_test, columns):
     random_accuracy = dummy_clf.score(X_test, y_test)
 
     y_pred = clf.predict(X_test)
+    y_pred_scores = clf.predict_proba(X_test)
+
+    #   print(y_pred_scores)
     print("Evaluation results:", end=" ")
     print("accuracy=%.3f (random=%.3f) f1=%.3f precision=%.3f recall=%.3f" % (
         res_accuracy, random_accuracy,
@@ -305,11 +320,11 @@ def test(clf, X_train, y_train, X_test, y_test, columns):
     print("Feature ranking:")
     importances = clf.feature_importances_
     indices = np.argsort(importances)[::-1]
-    for f in range(min(20, X_train.shape[1])):
+    for f in range(min(5, X_train.shape[1])):
         print("%d. feature %d (%f) %s" % (f + 1, indices[f], importances[indices[f]], columns[indices[f]]))
 
     print("-----------------")
-    return sklearn.metrics.f1_score(y_test, y_pred, pos_label="accented")
+    return sklearn.metrics.f1_score(y_test, y_pred, pos_label="accented"), y_pred, y_pred_scores
 
 
 # - - - - -
@@ -319,6 +334,48 @@ def run_experiments(X_train, y_train, X_test, y_test, columns):
     clf = sklearn.ensemble.RandomForestClassifier(n_estimators=200, n_jobs=-1, random_state=1)
     return test(clf, X_train, y_train, X_test, y_test, columns)
 
+
+def concat_random_forest_rnn(dic, speakers, cols, samples, y_pred_scores):
+
+    all_random_forest_scores = []
+    for i in speakers:
+        for j in dic[i]:
+            all_random_forest_scores.append(j)
+
+    le = len(samples)
+    c = 0
+    final_samples = []
+    for i in range(le):
+        new_samples = []
+        if len(samples[i][3]) == 0:
+            # Add to X train
+            tmp_samples = samples[i][0].tolist()
+            for j in range(len(tmp_samples)):
+                tmp = tmp_samples[j]
+                tmp.extend(all_random_forest_scores[c])
+                c += 1
+                new_samples.append(tmp)
+            new_samples = np.asarray(new_samples)
+            final_samples.append([new_samples, samples[i][1], samples[i][2], samples[i][3]])
+
+
+        else:
+            # Add to X train
+            new_samples = []
+            tmp_samples = samples[i][2].tolist()
+            for j in range(len(tmp_samples)):
+                tmp = tmp_samples[j]
+                tmp.extend(all_random_forest_scores[c])
+                c += 1
+                new_samples.append(tmp)
+            new_samples = np.asarray(new_samples)
+            final_samples.append([samples[i][0], samples[i][1], new_samples, samples[i][3]])
+
+    rf_cols = pd.Index(['random_forest_1', 'random_forest_2'])
+    cols = cols.append([rf_cols])
+    return final_samples, cols
+
+
 def testfeats(featset):
     print("All features")
     print(featset)
@@ -326,24 +383,47 @@ def testfeats(featset):
     bestfeats = featset
     bestfound = True
     bestscore = 0
-    # X_train, y_train, X_test ,y_test,cols = process_data(df_all, featset)
-    # bestscore = run_experiments(X_train,y_train,X_test,y_test,cols)
-    # print()
-    # print()
+    speakers = ['f1a', 'f2b', 'f3a', 'm1b', 'm2b', 'm3b', 'm4b']
+    speakers = ["f1as01p1", "f1as01p2", "f1as01p3", "f1as01p4"]
+    #speakers = ["f1a", "f2b", "f3a"]
+    final_speaker_test = "f3as01p2"
+
+    dic = {}
+    for i in speakers:
+
+        print(i)
+        _, cols, rf_X_train, rf_y_train, rf_X_test ,rf_y_test = process_data(df_all, featset, i, final_speaker_test)
+        _, y_pred, y_pred_scores = run_experiments(rf_X_train, rf_y_train, rf_X_test, rf_y_test,cols)
+        dic[i] = y_pred_scores
+
     sample_features = []
     feature_combinations = []
     sample_cols = []
 
+    _, y_pred, y_pred_scores = run_experiments(rf_X_train, rf_y_train, rf_X_test, rf_y_test, cols)
+
+    samples, cols, X_train, y_train, X_test, y_test = process_data(df_all, ["google_news_full"], final_speaker_test, final_speaker_test)
+
+    samples, cols = concat_random_forest_rnn(dic, speakers, cols, samples, y_pred_scores)
+
+    sample_features.append(["random forest", "google news"])
+    sample_cols.append(cols)
+    feature_combinations.append(samples)
+
+
+    '''
     for k in range(2):
         comb = combinations(featset, len(featset) - k)
         for j in comb:
             print(j)
             sample_features.append(j)
             print()
-            samples, cols = process_data(df_all, j)
+            samples, cols = process_data(df_all, j, "f3a")
+            #rf_output = []
+            #rf_score, y_pred = run_experiments(random_forest_X_train, random_forest_y_train, random_forest_X_test, random_forest_y_test, cols)
+
             feature_combinations.append(samples)
             sample_cols.append(cols)
-            #newscore = run_experiments(X_train, y_train, X_test, y_test, cols)
             #if newscore > bestscore:
             #    bestscore = newscore
             #    bestfeats = j
@@ -352,16 +432,19 @@ def testfeats(featset):
             #
             #print()
 
-    for i in sample_cols:
-        print(len(i))
-    return feature_combinations, sample_cols, sample_features
+    #for i in sample_cols:
+    #    print(len(i))
+    '''
+    return feature_combinations, sample_cols, sample_features, featset
     #return bestfeats, bestfound
 
 def get_features():
 
     featsets = dict()
 
-    good = ["syntax/pos", "punctuation"]#, "position", "morph", "ner", "supertag", "mentions"]
+    good = ["syntax/pos"]#, "punctuation", "position", "morph", "ner", "supertag", "mentions"]
+
+    good = ["punctuation"]
 
     featsets['task1'] = good
     '''
@@ -378,7 +461,7 @@ def get_features():
 
     bestset = featsets['task1']
 
-    return testfeats(bestset), featsets['task1']
+    return testfeats(bestset)
 
 if __name__ == '__main__':
 
