@@ -1,3 +1,5 @@
+# Authored by Syed Sarfaraz Akhtar
+
 import pickle
 import torch
 #from preprocessing.rose_accent import get_features
